@@ -8,7 +8,8 @@ plain pd.read_csv() would turn a pad name like "201" into an int.
     launch_id, launch_name, launch_datetime (ISO, UTC), launch_year, launch_month,
     provider, rocket, launch_location, country (nullable), status
 
-Optional column `last_updated` (not currently emitted by transform.py) is used to pick the
+valid_launches.csv contains the original input rows that passed, byte-for-byte in format
+(same columns/order/text/line endings). Optional column `last_updated` (not emitted by transform.py) is used to pick the
 newest copy when the same launch_id appears more than once.
 
 Every input row ends up in exactly one bucket:
@@ -391,20 +392,19 @@ def validate_launch_data(
         by_id.setdefault(item[2]["launch_id"], []).append(item)
 
     order = {idx: n for n, idx in enumerate(df.index)}
-    kept: list[tuple[int, dict]] = []
+    kept: list[int] = []  # positions (0-based) of the rows that survive
     for launch_id, group in by_id.items():
         if len(group) > 1 and has_updated:
             # keep the most recently updated copy (ISO strings sort correctly)
             group.sort(key=lambda g: str(g[1].get("last_updated") or ""), reverse=True)
         keeper, losers = group[0], group[1:]
-        kept.append((order[keeper[0]], keeper[2]))
+        kept.append(order[keeper[0]])
         for idx, row, _ in losers:
             _reject(rejected, idx, position[idx], launch_id, row, "duplicate", f"Duplicate launch_id '{launch_id}'")
 
-    valid_records = [rec for _, rec in sorted(kept, key=lambda t: t[0])]  # original row order
-
-    columns = REQUIRED_FIELDS + OPTIONAL_FIELDS
-    valid_df = pd.DataFrame(valid_records, columns=columns)  # keeps schema even when empty
+    # Valid output = the ORIGINAL input rows that passed (untouched text, same columns,
+    # same column order, same row order), so the file has exactly the input's format.
+    valid_df = df.iloc[sorted(kept)].reset_index(drop=True)
 
     # -- counters: each rejected row is in exactly one category ---------------
     by_cat = {c: sum(1 for r in rejected if r["category"] == c) for c in ("missing", "invalid", "duplicate")}
@@ -437,7 +437,12 @@ def validate_launch_data(
     (out / "rejected_records.json").write_text(
         json.dumps(_json_safe(rejected), indent=4, default=str, allow_nan=False), encoding="utf-8"
     )
-    valid_df.to_csv(out / "valid_launches.csv", index=False)
+    line_end = df.attrs.get("lineterminator", os.linesep)
+    text = valid_df.to_csv(index=False, lineterminator=line_end)
+    if not df.attrs.get("trailing_newline", True) and text.endswith(line_end):
+        text = text[: -len(line_end)]  # source had no newline after its last row; mirror that
+    with open(out / "valid_launches.csv", "w", encoding=df.attrs.get("encoding", "utf-8"), newline="") as fh:
+        fh.write(text)
 
     logger.info(
         _format_summary(
@@ -496,7 +501,14 @@ def load_transformed_csv(path: str | Path = TRANSFORMED_CSV) -> pd.DataFrame:
     for candidate in candidates:
         if candidate.is_file():
             logger.info("Reading %s", candidate.resolve())
-            return pd.read_csv(candidate, dtype=str, encoding="utf-8-sig")
+            data = candidate.read_bytes()
+            head = data[:65536]
+            df = pd.read_csv(candidate, dtype=str, encoding="utf-8-sig")
+            # remember the source format so valid_launches.csv can mirror it exactly
+            df.attrs["lineterminator"] = "\r\n" if b"\r\n" in head else "\n"
+            df.attrs["trailing_newline"] = data.endswith(b"\n")
+            df.attrs["encoding"] = "utf-8-sig" if head.startswith(b"\xef\xbb\xbf") else "utf-8"
+            return df
     raise FileNotFoundError(
         f"Could not find '{path}'. Looked in:\n  "
         + "\n  ".join(str(c.resolve()) for c in candidates)
