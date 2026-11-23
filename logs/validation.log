@@ -1,0 +1,42 @@
+2026-11-09 16:54:06,413 - INFO - Reading E:\Before window\AHSAN\PAI\spaceLaunch_Analylics\data\processed\launches_transformed.csv
+2026-11-09 16:54:06,445 - INFO - Validating 10 records...
+2026-11-09 16:54:06,460 - INFO - 
+================================================================
+ VALIDATION RESULT                                     COMPLETED
+================================================================
+ Records checked          10
+ Valid                    10   (100.0%)
+ Rejected                  0   (0.0%)
+    Missing values         0
+    Invalid values         0
+    Duplicates             0
+ Matches extraction      yes
+----------------------------------------------------------------
+ No problems found.
+----------------------------------------------------------------
+ Report   : data\processed\validation_report.json
+ Rejected : data\processed\rejected_records.json  (reason for each row)
+ Valid    : data\processed\valid_launches.csv
+ Log      : logs/validation.log
+================================================================
+2026-11-23 21:40:13,272 - INFO - Reading E:\Before window\AHSAN\PAI\spaceLaunch_Analylics\data\processed\launches_transformed.csv
+2026-11-23 21:40:13,290 - INFO - Validating 1000 records...
+2026-11-23 21:40:13,351 - INFO - 
+================================================================
+ VALIDATION RESULT                                     COMPLETED
+================================================================
+ Records checked        1000
+ Valid                  1000   (100.0%)
+ Rejected                  0   (0.0%)
+    Missing values         0
+    Invalid values         0
+    Duplicates             0
+ Matches extraction      yes
+----------------------------------------------------------------
+ No problems found.
+----------------------------------------------------------------
+ Report   : data\processed\validation_report.json
+ Rejected : data\processed\rejected_records.json  (reason for each row)
+ Valid    : data\processed\valid_launches.csv
+ Log      : logs/validation.log
+================================================================
