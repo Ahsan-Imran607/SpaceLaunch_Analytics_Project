@@ -5,6 +5,8 @@ import json
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+import plotly.io as pio
 import streamlit as st
 
 
@@ -45,14 +47,305 @@ FINAL_STATUSES = {
     FINAL_PARTIAL_FAILURE
 }
 
+
+# --------------------------------------------------
+# Visual theme (60-30-10)
+#   60%  Deep-space navy   -> page background
+#   30%  Slate blue        -> cards, sidebar, chart panels
+#   10%  Ignition orange   -> accents, highlights, key actions
+# --------------------------------------------------
+
+BG = "#0A1020"          # 60% - base
+SURFACE = "#131C33"     # 30% - panels
+SURFACE_ALT = "#0E1629" # 30% - sidebar
+BORDER = "#24304F"
+ACCENT = "#FF7A3D"      # 10% - accent
+TEXT = "#E8ECF5"
+MUTED = "#8B97B5"
+CYAN = "#4CC9F0"
+
 OUTCOME_COLORS = {
-    "Success": "#2ca02c",
-    "Partial failure": "#ff9f1c",
-    "Failure": "#d62728",
-    "Other known outcomes": "#9aa0a6"
+    "Success": "#3DDC97",
+    "Partial failure": "#FFB454",
+    "Failure": "#FF5C6C",
+    "Other known outcomes": "#5B6785"
 }
 
 OUTCOME_ORDER = list(OUTCOME_COLORS)
+
+FONT_FAMILY = "'IBM Plex Sans', 'Segoe UI', sans-serif"
+
+pio.templates["space"] = go.layout.Template(
+    layout=go.Layout(
+        font=dict(family=FONT_FAMILY, color=TEXT, size=13),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        colorway=[ACCENT, CYAN, "#9D7BFF", "#3DDC97", "#FFB454", "#FF5C6C"],
+        title=dict(font=dict(size=17, color=TEXT), x=0.01, xanchor="left"),
+        margin=dict(l=16, r=36, t=64, b=24),
+        xaxis=dict(
+            gridcolor="#1E2A47",
+            zerolinecolor="#2A3858",
+            linecolor=BORDER,
+            tickfont=dict(color=MUTED),
+            title=dict(font=dict(color=MUTED, size=12)),
+            automargin=True
+        ),
+        yaxis=dict(
+            gridcolor="#1E2A47",
+            zerolinecolor="#2A3858",
+            linecolor=BORDER,
+            tickfont=dict(color=MUTED),
+            title=dict(font=dict(color=MUTED, size=12)),
+            automargin=True
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.22,
+            x=0,
+            title_text="",
+            font=dict(color=MUTED, size=12)
+        ),
+        hoverlabel=dict(
+            bgcolor=SURFACE_ALT,
+            bordercolor=ACCENT,
+            font=dict(family=FONT_FAMILY, color=TEXT)
+        ),
+        coloraxis=dict(colorbar=dict(outlinewidth=0, tickfont=dict(color=MUTED)))
+    )
+)
+pio.templates.default = "space"
+
+HEATMAP_SCALE = [
+    [0.0, "#131C33"],
+    [0.35, "#2E4A8A"],
+    [0.7, CYAN],
+    [1.0, ACCENT]
+]
+
+THEME_CSS = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+:root {
+    --bg: #0A1020;
+    --surface: #131C33;
+    --surface-alt: #0E1629;
+    --border: #24304F;
+    --accent: #FF7A3D;
+    --text: #E8ECF5;
+    --muted: #8B97B5;
+}
+
+html, body, [class*="css"], .stApp {
+    font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+}
+
+.stApp {
+    background:
+        radial-gradient(1100px 500px at 85% -10%, rgba(76, 201, 240, 0.08), transparent 60%),
+        var(--bg);
+    color: var(--text);
+}
+
+/* Hide default Streamlit chrome, keep sidebar toggle */
+#MainMenu, footer { visibility: hidden; }
+[data-testid="stHeader"] { background: transparent; }
+
+.block-container {
+    max-width: 1440px;
+    padding: 2.5rem 3rem 4rem 3rem;
+}
+
+/* ---------- Typography ---------- */
+h1, h2, h3, h4 {
+    font-family: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
+    letter-spacing: -0.01em;
+    color: var(--text);
+}
+
+h1 {
+    font-size: 2.6rem !important;
+    font-weight: 700 !important;
+    padding-bottom: 0.25rem;
+}
+
+h2 {
+    font-size: 1.6rem !important;
+    font-weight: 600 !important;
+    margin-top: 3rem !important;
+    padding: 0 0 0 0.9rem !important;
+    border-left: 4px solid var(--accent);
+    line-height: 1.2;
+}
+
+h3 {
+    font-size: 1.05rem !important;
+    font-weight: 500 !important;
+    color: var(--muted) !important;
+    margin: 0.4rem 0 1.2rem 0 !important;
+    padding-top: 0 !important;
+}
+
+p, li, label, [data-testid="stMarkdownContainer"] {
+    color: var(--text);
+}
+
+[data-testid="stCaptionContainer"], .stCaption, small {
+    color: var(--muted) !important;
+}
+
+code {
+    color: var(--accent) !important;
+    background: rgba(255, 122, 61, 0.1) !important;
+    border-radius: 6px;
+}
+
+/* ---------- Sidebar ---------- */
+[data-testid="stSidebar"] {
+    background: var(--surface-alt);
+    border-right: 1px solid var(--border);
+}
+
+[data-testid="stSidebar"] .block-container,
+[data-testid="stSidebarUserContent"] {
+    padding-top: 1.5rem;
+}
+
+[data-testid="stSidebar"] h2 {
+    font-size: 1.2rem !important;
+    border-left: 4px solid var(--accent);
+    margin-top: 0 !important;
+    margin-bottom: 1.2rem !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+[data-testid="stSidebar"] [data-testid="stMultiSelect"] {
+    margin-bottom: 0.9rem;
+}
+
+/* Multiselect */
+[data-baseweb="select"] > div {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+}
+
+[data-baseweb="select"] > div:focus-within {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+span[data-baseweb="tag"] {
+    background: rgba(255, 122, 61, 0.16) !important;
+    border: 1px solid rgba(255, 122, 61, 0.45);
+    border-radius: 6px !important;
+    color: var(--text) !important;
+}
+
+/* ---------- KPI metric cards ---------- */
+[data-testid="stMetric"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 14px;
+    padding: 1.15rem 1.3rem;
+    min-height: 118px;
+}
+
+[data-testid="stMetricLabel"] p {
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+[data-testid="stMetricValue"] {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.1rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+/* ---------- Layout spacing ---------- */
+[data-testid="stHorizontalBlock"] {
+    gap: 1.25rem;
+}
+
+[data-testid="stVerticalBlock"] {
+    gap: 1.1rem;
+}
+
+/* ---------- Chart panels ---------- */
+[data-testid="stPlotlyChart"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 0.5rem 0.75rem;
+    overflow: hidden;
+}
+
+/* ---------- Tables ---------- */
+[data-testid="stDataFrame"] {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* ---------- Alerts ---------- */
+[data-testid="stAlert"] {
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+}
+
+/* ---------- Buttons ---------- */
+.stDownloadButton button, .stButton button {
+    background: var(--accent);
+    color: #1A0E08;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    padding: 0.65rem 1.4rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.stDownloadButton button:hover, .stButton button:hover {
+    background: #FF8F5E;
+    color: #1A0E08;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(255, 122, 61, 0.35);
+}
+
+.stDownloadButton button:focus-visible, .stButton button:focus-visible {
+    outline: 2px solid var(--text);
+    outline-offset: 2px;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+@media (max-width: 900px) {
+    .block-container { padding: 1.5rem 1rem 3rem 1rem; }
+    h1 { font-size: 1.9rem !important; }
+}
+</style>
+"""
+
+st.markdown(THEME_CSS, unsafe_allow_html=True)
+
+
+def show_chart(fig, height=400):
+    """Apply a consistent size and render a Plotly chart."""
+    fig.update_layout(height=height)
+    st.plotly_chart(fig, use_container_width=True)
 
 
 # --------------------------------------------------
@@ -207,10 +500,11 @@ def make_outcome_chart(data, group_column, title, group_label):
             "Share: %{x:.1f}%<br>"
             "Count: %{customdata[0]} of %{customdata[1]}"
             "<extra></extra>"
-        )
+        ),
+        marker_line_width=0
     )
-    fig.update_layout(xaxis_range=[0, 100])
-    st.plotly_chart(fig, use_container_width=True)
+    fig.update_layout(xaxis_range=[0, 100], bargap=0.3)
+    show_chart(fig, height=480)
 
 
 # --------------------------------------------------
@@ -388,8 +682,9 @@ else:
                 "launches": "Number of launches"
             }
         )
+        fig.update_traces(line=dict(width=2.5), marker=dict(size=5))
         fig.update_layout(hovermode="x unified")
-        st.plotly_chart(fig, use_container_width=True)
+        show_chart(fig, height=420)
 
     with right:
         yearly_display = yearly.copy()
@@ -406,8 +701,9 @@ else:
                 "launches": "Number of launches"
             }
         )
-        fig.update_traces(textposition="outside")
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_traces(textposition="outside", cliponaxis=False, marker_line_width=0)
+        fig.update_layout(bargap=0.3)
+        show_chart(fig, height=420)
 
 
 # --------------------------------------------------
@@ -444,8 +740,10 @@ for chart_column, (column, title) in zip(chart_columns, category_columns):
                 "launches": "Number of launches"
             }
         )
-        fig.update_traces(textposition="outside")
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_traces(textposition="outside", cliponaxis=False, marker_line_width=0)
+        fig.update_layout(bargap=0.3)
+        fig.update_yaxes(title_text="", tickfont=dict(size=11))
+        show_chart(fig, height=500)
 
 
 # --------------------------------------------------
@@ -535,9 +833,10 @@ else:
             text_auto=True,
             aspect="auto",
             title="Launch Activity Heatmap: Year × Month",
-            color_continuous_scale="Blues"
+            color_continuous_scale=HEATMAP_SCALE
         )
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_layout(legend=dict(title_text=""))
+        show_chart(fig, height=460)
 
     annual_counts = (
         filtered_df.dropna(subset=["launch_year"])
@@ -580,15 +879,20 @@ else:
                     "launch_year": "Year",
                     "yoy_change_pct": "Change from previous year (%)",
                     "direction": "Change"
+                },
+                color_discrete_map={
+                    "Increase": OUTCOME_COLORS["Success"],
+                    "Decrease": OUTCOME_COLORS["Failure"]
                 }
             )
             fig.add_hline(
                 y=0,
                 line_dash="dash",
-                line_color="gray"
+                line_color=MUTED
             )
-            fig.update_traces(textposition="outside")
-            st.plotly_chart(fig, use_container_width=True)
+            fig.update_traces(textposition="outside", cliponaxis=False, marker_line_width=0)
+            fig.update_layout(bargap=0.3)
+            show_chart(fig, height=460)
 
     st.subheader("Annual Launch Counts and Year-over-Year Change")
     st.dataframe(annual_counts, use_container_width=True, hide_index=True)
@@ -722,8 +1026,9 @@ else:
                         "Records": "Number of records"
                     }
                 )
-                fig.update_traces(textposition="outside")
-                st.plotly_chart(fig, use_container_width=True)
+                fig.update_traces(textposition="outside", cliponaxis=False, marker_line_width=0)
+                fig.update_layout(bargap=0.35, margin=dict(t=30))
+                show_chart(fig, height=340)
 
             if valid_count + rejected_count == total_extracted:
                 st.success("Record accounting verified: valid + rejected = extracted.")
@@ -766,8 +1071,9 @@ fig = px.bar(
     }
 )
 fig.update_xaxes(range=[0, 100])
-fig.update_traces(textposition="outside")
-st.plotly_chart(fig, use_container_width=True)
+fig.update_traces(textposition="outside", cliponaxis=False, marker_line_width=0)
+fig.update_layout(bargap=0.3)
+show_chart(fig, height=440)
 
 st.caption(
     "Field completeness describes validated database records. "
@@ -858,9 +1164,10 @@ else:
                 "success_rate_pct": ":.2f"
             }
         )
-        fig.update_xaxes(range=[0, 100])
-        fig.update_traces(textposition="outside")
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_xaxes(range=[0, 115])
+        fig.update_traces(textposition="outside", cliponaxis=False, marker_line_width=0)
+        fig.update_layout(bargap=0.3)
+        show_chart(fig, height=max(420, 34 * len(ranked_providers) + 140))
 
     st.subheader("Provider Performance Details")
     st.dataframe(
