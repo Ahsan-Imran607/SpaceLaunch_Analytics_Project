@@ -68,7 +68,7 @@ def load_data():
 
         # Insert records
         cursor = connection.executemany("""
-            INSERT OR IGNORE INTO launches (
+            INSERT OR REPLACE INTO launches (
                 launch_id, launch_name, launch_datetime,
                 launch_year, launch_month, provider,
                 rocket, launch_location, country, status
