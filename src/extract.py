@@ -16,11 +16,11 @@ RAW_FOLDER = "data/raw"
 START_DATE = "2020-01-01T00:00:00Z"
 END_DATE = "2026-01-01T00:00:00Z"
 
-PAGE_SIZE = 10
-MAX_RECORDS = 10
+PAGE_SIZE = 100
+MAX_RECORDS = 1000
 
 # Free API limit: 15 requests per hour
-REQUEST_DELAY = 0
+REQUEST_DELAY = 1
 
 # Maximum retries for failed requests
 MAX_RETRIES = 3
