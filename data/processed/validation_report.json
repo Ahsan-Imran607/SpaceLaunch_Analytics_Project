@@ -1,0 +1,12 @@
+{
+    "total_records": 10,
+    "valid_records": 10,
+    "rejected_records": 0,
+    "duplicate_records": 0,
+    "missing_values": 0,
+    "invalid_records": 0,
+    "reject_rate": 0.0,
+    "expected_records": 10,
+    "count_matches_expected": true,
+    "status": "completed"
+}

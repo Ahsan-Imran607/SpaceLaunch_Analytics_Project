@@ -6,7 +6,7 @@ from pathlib import Path
 # Project paths
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CSV_PATH = PROJECT_ROOT / "data" / "processed" / "valid_launches.csv"
-DB_PATH = PROJECT_ROOT / "data" / "launches.db"
+DB_PATH = PROJECT_ROOT / "data" / "database" / "launches.db"
 
 # Required CSV columns
 REQUIRED_COLUMNS = [
